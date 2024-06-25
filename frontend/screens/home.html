@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="my-3">
+      <select
+        class="js-example-basic-single"
+        name="category"
+        id="category_selector"
+      >
+        <option value="ALL">All</option>
+        <option value="IT">IT</option>
+        <option value="IRES">IRES</option>
+      </select>
+    </div>
+    <table id="myTable" class="display p-3" style="width: 100%">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Email</th>
+          <th>Name</th>
+          <th>Category</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="table_body"></tbody>
+    </table>
+
+    <div class="modal fade" id="delete_modal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="exampleModalLabel">Modal title</h1>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body" id="delete_modal_body"></div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Close
+            </button>
+            <button
+              id="delete_button"
+              type="submit"
+              class="btn btn-danger"
+              data-bs-toggle="modal"
+              data-bs-target="#delete_modal"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="edit_modal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="exampleModalLabel">Modal title</h1>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body" id="edit_modal_body">
+            <form method="post" id="edit_item_form" class="p-3">
+              <input type="hidden" name="id" />
+              <div class="mb-3">
+                <label for="email" class="form-label">Email address:</label>
+                <input
+                  type="email"
+                  class="form-control"
+                  id="edit_email"
+                  name="email"
+                />
+              </div>
+              <div class="my-3">
+                <select name="category" id="edit_category">
+                  <option value="IT">IT</option>
+                  <option value="IRES">IRES</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label for="name" class="form-label">Password</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="edit_name"
+                  name="name"
+                />
+              </div>
+              <div class="modal-footer">
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  data-bs-dismiss="modal"
+                >
+                  Close
+                </button>
+                <button
+                  id="edit_button"
+                  type="submit"
+                  class="btn btn-primary"
+                  data-bs-toggle="modal"
+                  data-bs-target="#edit_modal"
+                >
+                  Edit
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      getDatatable();
+
+      function edit_user(id) {
+        $.get("./backend/users/" + id, (user) => {
+          $("#edit_id").val(user.id);
+          $("#edit_name").val(user.name);
+          $("#edit_email").val(user.email);
+          $("#edit_category").val(user.category);
+        });
+      }
+
+      $("#edit_item_form").validate({
+        submitHandler: (form, event) => {
+          event.preventDefault();
+          let data = serializeForm(form);
+          console.log(data);
+
+          $.post("./backend/users/add", data).done(() => {
+            console.log("Succesfully edited");
+          });
+        },
+      });
+
+      function delete_user(id) {
+        $("#delete_modal_body").html(
+          `<h3>Are you sure you want to delete the user with id: ${id}</h3>`
+        );
+
+        $("#delete_button").click(() => {
+          $.ajax({
+            url: "./backend/users/delete/" + id,
+            type: "DELETE",
+            success: () => {
+              console.log("Succesfully deleted!");
+              getDatatable();
+            },
+          });
+        });
+      }
+
+      function getDatatable() {
+        $.get("./backend/users", (data) => {
+          let html = ``;
+
+          var selectedValue = "ALL";
+
+          $.each(data, (index, item) => {
+            html += `
+              <tr>
+                <td>${item.id}</td>  
+                <td>${item.email}</td>  
+                <td>${item.name}</td>  
+                <td>${item.category}</td>  
+                <td>
+                  <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#edit_modal" onclick="edit_user(${item.id})">Edit</button>  
+                  <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#delete_modal" onclick="delete_user(${item.id})">Delete</button>  
+                </td>  
+              </tr>
+              `;
+          });
+
+          $("#table_body").html(html);
+          $("#myTable").DataTable();
+          html = ``;
+
+          $("#category_selector").on("change", function () {
+            selectedValue = $(this).val();
+
+            if (selectedValue === "ALL") {
+              $.each(data, (index, item) => {
+                html += `
+              <tr>
+                <td>${item.id}</td>  
+                <td>${item.email}</td>  
+                <td>${item.name}</td>  
+                <td>${item.category}</td>  
+                <td>
+                  <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#edit_modal" onclick="edit_user(${item.id})">Edit</button>  
+                  <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#delete_modal" onclick="delete_user(${item.id})">Delete</button>  
+                </td>  
+              </tr>
+              `;
+              });
+
+              $("#table_body").html(html);
+              $("#myTable").DataTable();
+              html = ``;
+            } else if (selectedValue === "IT") {
+              $.each(data, (index, item) => {
+                if (item.category === "IT") {
+                  html += `
+              <tr>
+                <td>${item.id}</td>  
+                <td>${item.email}</td>  
+                <td>${item.name}</td>  
+                <td>${item.category}</td>  
+                <td>
+                  <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#edit_modal" onclick="edit_user(${item.id})">Edit</button>  
+                  <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#delete_modal" onclick="delete_user(${item.id})">Delete</button>  
+                </td>  
+              </tr>
+          `;
+                }
+              });
+              $("#table_body").html(html);
+              $("#myTable").DataTable();
+              html = ``;
+            } else if (selectedValue === "IRES") {
+              $.each(data, (index, item) => {
+                if (item.category === "IRES") {
+                  html += `
+              <tr>
+                <td>${item.id}</td>  
+                <td>${item.email}</td>  
+                <td>${item.name}</td>  
+                <td>${item.category}</td>  
+                <td>
+                  <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#edit_modal" onclick="edit_user(${item.id})">Edit</button>  
+                  <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#delete_modal" onclick="delete_user(${item.id})">Delete</button>  
+                </td>  
+              </tr>
+          `;
+                }
+              });
+              $("#table_body").html(html);
+              $("#myTable").DataTable();
+              html = ``;
+            }
+          });
+        });
+      }
+
+      serializeForm = (form) => {
+        let jsonResult = {};
+        $.each($(form).serializeArray(), function () {
+          jsonResult[this.name] = this.value;
+        });
+
+        return jsonResult;
+      };
+
+      $(".js-example-basic-single").select2();
+    </script>
+  </body>
+</html>
